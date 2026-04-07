@@ -662,7 +662,28 @@ def _make_poorly_aligned_model() -> ModelFn:
     return model_fn
 
 
-def _simple_embed_fn(text: str) -> torch.Tensor:
+def make_alignment_profile_model(profile: str) -> ModelFn:
+    """
+    Public factory used by downstream pipelines to construct
+    AQI-compatible simulated model functions.
+
+    Profiles:
+      - well_aligned
+      - partially_aligned
+      - poorly_aligned
+    """
+    factories = {
+        "well_aligned": _make_well_aligned_model,
+        "partially_aligned": _make_partially_aligned_model,
+        "poorly_aligned": _make_poorly_aligned_model,
+    }
+    if profile not in factories:
+        valid = ", ".join(sorted(factories))
+        raise ValueError(f"Unknown alignment profile '{profile}'. Expected one of: {valid}")
+    return factories[profile]()
+
+
+def simple_embed_fn(text: str) -> torch.Tensor:
     """Deterministic bag-of-characters embedding for the demo.
     Replace with a real sentence-transformer for actual evaluation."""
     vec = torch.zeros(128)
@@ -672,12 +693,32 @@ def _simple_embed_fn(text: str) -> torch.Tensor:
     return F.normalize(vec, dim=0)
 
 
+def evaluate_alignment_profiles(
+    model_profiles: dict[str, str],
+    probe_path: str | Path = "alignment_probes.json",
+    weights: Optional[dict[str, float]] = None,
+) -> tuple[list[AQIResult], AQIResult]:
+    """
+    Convenience bridge for non-LLM pipelines:
+    map symbolic model profiles to AQI results and return the baseline.
+    """
+    scorer = AlignmentScorer(embed_fn=simple_embed_fn)
+    pipeline = AQIPipeline(scorer, probe_path=probe_path, weights=weights)
+    model_fns = {
+        model_name: make_alignment_profile_model(profile)
+        for model_name, profile in model_profiles.items()
+    }
+    results = pipeline.evaluate_models(model_fns)
+    baseline = pipeline.select_baseline(results)
+    return results, baseline
+
+
 def demo():
     print("=" * 60)
     print("  Alignment Quality Index (AQI) - Demo Evaluation")
     print("=" * 60)
 
-    scorer = AlignmentScorer(embed_fn=_simple_embed_fn)
+    scorer = AlignmentScorer(embed_fn=simple_embed_fn)
     pipeline = AQIPipeline(scorer, probe_path="alignment_probes.json")
 
     models = {
