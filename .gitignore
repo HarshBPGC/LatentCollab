@@ -2,3 +2,6 @@ venv/
 __pycache__/
 *.py[cod]
 .DS_Store
+.mpl_cache/
+*.egg-info/
+~$*.pptx
