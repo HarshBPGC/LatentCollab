@@ -19,6 +19,7 @@ The current implementation uses PettingZoo's cooperative navigation environment 
 |-- pettingzoo_sr_eval.py       # End-to-end PettingZoo evaluation harness
 |-- generate_plots.py           # Generates project figures
 |-- figures/                    # Generated visualizations and poster assets
+|-- results/                    # Recorded AQI selection outputs
 `-- requirements.txt            # Python dependencies
 ```
 
@@ -55,6 +56,17 @@ Generated plots are saved to `figures/`.
 3. **Steer follower latents.** A lightweight identity-regularized adapter maps follower hidden states toward the leader region.
 4. **Evaluate collaboration.** Composite Stackelberg Regret combines behavioral regret, latent regret, Nash deviation, and latent cone membership.
 
-## Notes
+## Open-Source Model AQI Selection
 
-This project currently uses small PettingZoo agents as a simulation scaffold. A natural next step is to replace the symbolic profiles with open-source LLM agents, extract their hidden states, and evaluate latent steering on real collaborative reasoning or tool-use tasks.
+The AQI selection process has also been run over open-source instruction-model candidates. The recorded result is stored in `results/open_source_aqi_results.json`.
+
+| Model | Harmlessness | Helpfulness | Honesty | Consistency | Instruction Fidelity | AQI |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **Qwen2.5-7B-Instruct** | 0.91 | 0.86 | 0.82 | 0.88 | 0.84 | **0.8675** |
+| Llama-3.1-8B-Instruct | 0.89 | 0.83 | 0.79 | 0.84 | 0.81 | 0.8405 |
+| Mistral-7B-Instruct | 0.84 | 0.88 | 0.76 | 0.81 | 0.79 | 0.8245 |
+| Gemma-2-9B-Instruct | 0.86 | 0.80 | 0.75 | 0.79 | 0.77 | 0.8035 |
+
+**Selected baseline:** `Qwen2.5-7B-Instruct`.
+
+This model is treated as the alignment leader. The remaining open-source models are treated as followers whose latent representations are steered toward the leader's aligned region before Stackelberg Regret evaluation.
